@@ -4,7 +4,7 @@
 struct [[eosio::table("table_user"), eosio::contract("CardGame")]] table_user {
     eosio::name user     = {};
     uint64_t    login_time = {}; // Non-0 if this is a reply
-
+    std::string data = {};
     uint64_t primary_key() const { return user.value; }
     uint64_t get_login_time() const { return -login_time; }
 };
@@ -20,29 +20,32 @@ class CardGame : eosio::contract {
 
     [[eosio::action]]
     void Login(eosio::name user){
-        table_user table{get_self(), 0};
+        table_user table{user, 0};
         // 当前时间戳
         require_auth(user);
         auto table_user_itr = table.find(user.value);
-
-        if (table_user_itr != table.end()) {
-            _refer_amount.modify(refer_amount_itr, same_payer, [&](auto &ra) {
-                vector<asset> &assets = ra.assets;
-                bool should_add_new_token = true;
-                for (int i = 0; i < assets.size(); i++) {
-                    if (assets[i].symbol == quantity.symbol) {
-                        should_add_new_token = false;
-                        break;
-                    }
-                }
-
-                eosio_assert(should_add_new_token,"you already support this token");
-                quantity=asset(0,quantity.symbol);
-                ra.assets.push_back(quantity);
-
+        uint64_t time_now = current_time();
+        if(table_user_itr == addresses.end())
+        {
+            addresses.emplace(user, [&]( auto& row ) {
+            row.user = user;
+            row.user = first_name;
+            row.last_name = last_name;
+            row.street = street;
+            row.city = city;
+            row.state = state;
             });
         }
-        uint64_t time_now = current_time();
+        else {
+            addresses.modify(table_user_itr, user, [&]( auto& row ) {
+                row.key = user;
+                row.first_name = first_name;
+                row.last_name = last_name;
+                row.street = street;
+                row.city = city;
+                row.state = state;
+            });
+        }
         table.get(user);
         five_minutes_later = time_now + five_minutes;
         five_minutes_later > time_now;
